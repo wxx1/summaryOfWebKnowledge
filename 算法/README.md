@@ -172,6 +172,25 @@ var binaryTreePaths = function (root) {
  console.log(binaryTreePaths(root))
 ```
 
+#### 二叉树最大路径和
+
+```javascript
+const maxPathSum = (root) => {
+  let maxSum = Number.MIN_SAFE_INTEGER // 纪录保持者
+  const dfs = (root) => {
+    if (root == null) return 0 // 递归的出口
+    const left = Math.max(0, dfs(root.left)) // 
+    const right = Math.max(0, dfs(root.right))// 
+    maxSum = Math.max(maxSum, left + root.val + right) //当前子树的maxSum挑战最大值
+    return root.val + Math.max(left, right) // 向父节点提供的最大和，要包括自己
+  }
+  dfs(root) // 递归的入口
+  return maxSum
+}
+```
+
+
+
 #### 6、模拟实现loadash中的_.get()函数
 
 ```javascript
@@ -421,5 +440,404 @@ function isCircularList2(list){
     console.log('非循环')
     return false
 }
+```
+
+#### 13、最大连续子数组
+
+>给定一个含有 n 个正整数的数组和一个正整数 s ，找出该数组中满足其和 ≥ s 的长度最小的连续子数组，并返回其长度。如果不存在符合条件的连续子数组，返回 0。
+>
+> ** 示例：*
+>
+> ** 输入：s = 7, nums = [2,3,1,2,4,3]*
+>
+> ** 输出：2*
+>
+> ** 解释：子数组 [4,3] 是该条件下的长度最小的连续子数组。*
+>
+>滑动窗口法：O(n)
+>
+> 处理子数组，子字符串，最先想到的肯定是滑动窗口 
+
+```javascript
+const minSubArrayLen = function (s, nums) {
+    let arr = [];//维护一个数组
+    const len = nums.length;
+    let min = len + 1; //最小连续子数组
+    let sum = 0
+    for (let i = 0; i < len; i++) {
+        arr.push(nums[i]);
+        sum += nums[i];
+        while (sum >= s) {
+            sum -= arr[0]
+            min = Math.min(arr.length, min)
+            arr.shift()
+        }
+    }
+    return min == len + 1 ? 0 : min;
+}
+
+let s = 7
+let arr = [2,3,1,2,4,3]
+console.log(minSubArrayLen(s,arr))
+
+
+//暴力法，两层循环找到符合条件：和 >= s 的长度，维护最小长度  O(n2)
+function find(s, nums){
+    const len = nums.length;
+    let min = len+1;
+    for(let i = 0; i < len; i++){
+        let sum = 0;
+        for(let j = i; j < len; j++){
+            sum += nums[j]
+            if(sum >= s){
+                min = Math.min(min, j-i+1)
+            }
+        }
+    }
+    return min == len + 1 ? 0 : min;
+}
+console.log(find(s,arr))
+```
+
+#### 14、中序遍历
+
+```javascript
+//递归
+let result = [];
+let dfs = function(node){
+    if(node){
+        dfs(node.left);
+        result.push(node.value);
+        dfs(node.right)
+    }
+}
+```
+
+```javascript
+//非递归
+function dfs(node){
+    let result = [];
+    let stack = [];
+    while(stack.length || node){
+        if(node){
+            stack.push(node)
+            node = node.left;
+        }else{
+            node = stack.pop();
+            result.push(node.value)
+            node = node.right /如果没有右子树，会再次想栈内取一个节点，及双亲节点
+        }
+    }
+    return result;
+}
+```
+
+#### 15、前序遍历
+
+```javascript
+//递归
+let result = []
+function dfs(node){
+    if(node){
+        result.push(node.val);
+        dfs(node.left)
+        dfs(node.right)
+    }
+}
+
+//非递归
+function dfs(tree){
+    let result = []
+    let stack = []
+    stack.push(tree)
+    while(stack.length){
+        let node = stack.pop()
+        result.push(node.value);
+        node.right && stack.push(node.right);
+        node.left && stack.push(node.left)
+    }
+}
+```
+
+#### 16、复原IP地址
+
+>给定一个只包含数字的字符串，复原它并返回所有可能的 IP 地址格式。
+>
+>*有效的 IP 地址正好由四个整数（每个整数位于 0 到 255 之间组成），整数之间用 ‘.’ 分隔。*
+>
+>*示例:*
+>
+>*输入: “25525511135”*
+>
+>*输出: [“255.255.11.135”, “255.255.111.35”]*
+>
+>
+>
+>*这道题思路主要是考察回溯和剪枝，逐步构造一棵树， 树的每层都对应ip地址的每一段，最好能到达叶子节点的路径就是符合的结果*
+
+```javascript
+var restoreIpAddresses = function(s){
+    if(s.length < 4 || s.length >12) return []
+
+    const result = []
+
+    for(let i = 1; i < 4; i++){
+        let str = s.substr(0,i);
+        if(parseInt(str) > 255 || (str.length > 1 && str[0] === '0')) continue;
+        defaultStatus([str], i, 1);
+    }
+
+    function dfs(arr, begin, depth){
+        if(begin >= s.length){
+            if(arr.length === 4){
+                result.push(arr.join('.'));
+            }
+            return;
+        }
+        let leftLen = s.length - begin;
+        if (leftLen > (4 - depth) * 3) return;    //当剩下的字符串长度已经超过最大长度，直接返回
+        for (let i=1;i<4 && i<=leftLen; i++) {
+            let str = s.substr(begin, i);
+            if (parseInt(str) > 255 || str.length > 1 && str[0] === '0') continue;   //若当前字符段不满足规则，则跳过
+            let temp = arr.slice();
+            temp.push(str);
+            d(temp, begin + i);
+        }
+    }
+    return result;
+}
+```
+
+#### 17、零钱兑换
+
+给定不同面额的硬币 coins 和一个总金额 amount。编写一个函数来计算可以凑成总金额所需的最少的硬币个数。如果没有任何一种硬币组合能组成总金额，返回 -1。
+
+```
+输入: coins = [1, 2, 5], amount = 11
+输出: 3 
+解释: 11 = 5 + 5 + 1
+```
+
+> 动态规划：尝试分解子问题 
+>
+> 假设给出的不同面额的硬币是[1, 2, 5]，目标是 120，问最少需要的硬币个数？ 
+>
+> dp[i]: 表示总金额为 i 的时候最优解法的硬币数 
+>
+>我们想一下：求总金额 120 有几种方法？下面这个思路关键了 !!!
+>  一共有 3 种方式，因为我们有 3 种不同面值的硬币。
+>  1.拿一枚面值为 1 的硬币 + 总金额为 119 的最优解法的硬币数量
+>    这里我们只需要假设总金额为 119 的最优解法的硬币数有人已经帮我们算好了，
+>    不需要纠结于此。(虽然一会也是我们自己算，哈哈)
+>    即：dp[119] + 1
+>  2.拿一枚面值为 2 的硬币 + 总金额为 118 的最优解法的硬币数
+>    这里我们只需要假设总金额为 118 的最优解法的硬币数有人已经帮我们算好了
+>    即：dp[118] + 1
+>  3.拿一枚面值为 5 的硬币 + 总金额为 115 的最优解法的硬币数
+>    这里我们只需要假设总金额为 115 的最优解法的硬币数有人已经帮我们算好了
+>    即：dp[115] + 1
+>    
+>  - 所以，总金额为 120 的最优解法就是上面这三种解法中最优的一种，也就是硬币数最少
+>    的一种，我们下面试着用代码来表示一下：
+>    
+>  - dp[120] = Math.min(dp[119] + 1, dp[118] + 1, dp[115] + 1);
+>    
+>  - 推导出「状态转移方程」：
+>    dp[i] = Math.min(dp[i - coin] + 1, dp[i - coin] + 1, ...)
+>    其中 coin 有多少种可能，我们就需要比较多少次，那么我们到底需要比较多少次呢？
+>    当然是 coins 数组中有几种不同面值的硬币，就是多少次了~ 遍历 coins 数组，
+>    分别去对比即可
+>    
+>  - 上面方程中的 dp[119]，dp[118]，dp[115] 我们继续用这种思想去分解，
+>    这就是动态规划了，把这种思想，思考问题的方式理解了，这一类型的题目
+>    问题都不会太大。
+>
+
+```javascript
+var coinChange = function(coins, amount) {
+  let dp = new Array( amount + 1 ).fill( Infinity );//无穷大
+  dp[0] = 0;
+  
+  for (let i = 1; i <= amount; i++) {
+    for (let coin of coins) {
+      if (i - coin >= 0) {
+        dp[i] = Math.min(dp[i], dp[i - coin] + 1);
+      }
+    }
+  }
+  
+  return dp[amount] === Infinity ? -1 : dp[amount];
+}
+
+```
+
+#### 18、合并两个有序数组
+
+1、将两个数组合并后排序
+
+2、暴力比较
+
+3、 o(m+n)
+
+![](..\img\merge1.png)
+
+- nums1 、 nums2 有序，若把 nums2 全部合并到 nums1 ，则合并后的 nums1 长度为 m+n
+- 我们可以从下标 m+n-1 的位置填充 nums1 ，比较 nums1[len1] 与 nums2[len2] 的大小，将最大值写入 nums1[len]，即
+  nums1[len1]>=nums2[len2] ，nums1[len--] = nums1[len1--] ,这里 -- 是因为写入成功后，下标自动建议，继续往前比较
+  否则 nums1[len--] = nums2[len2--]
+- 边界条件：
+  若 len1 < 0 ，即 len2 >= 0 ，此时 nums1 已重写入， nums2 还未合并完，仅仅需要将 nums2 的剩余元素（0…len）写入 nums2 即可，写入后，合并完成
+  若 len2 < 0，此时 nums2 已全部合并到 nums1 ，合并完成
+
+```javascript
+
+var merge = function(nums1, m, nums2, n) {
+    let length = m + n
+    while(n > 0) {
+        if(m <= 0) {
+            nums1[--length] = nums2[--n]
+            continue
+        }
+        nums1[--length] = nums1[m-1] >= nums2[n-1] ? nums1[--m]: nums2[--n]
+    }
+};
+
+```
+
+#### 19、买卖股票最佳时机
+
+给定一个数组，它的第  i 个元素是一支给定股票第 i 天的价格。
+
+如果你最多只允许完成一笔交易（即买入和卖出一支股票一次），设计一个算法来计算你所能获取的最大利润。
+
+注意：你不能在买入股票前卖出股票。
+
+示例 1:
+
+输入: [7,1,5,3,6,4]
+输出: 5
+解释: 在第 2 天（股票价格 = 1）的时候买入，在第 5 天（股票价格 = 6）的时候卖出，最大利润 = 6-1 = 5 。
+注意利润不能是 7-1 = 6, 因为卖出价格需要大于买入价格；同时，你不能在买入前卖出股票。
+示例 2:
+
+输入: [7,6,4,3,1]
+输出: 0
+解释: 在这种情况下, 没有交易完成, 所以最大利润为 0。
+
+>循环版
+>暴力循环，i 为卖出的天数，j 为买入的天数。
+>
+>i 从 1 开始，因为第 0 天不可能卖出。
+>
+>j 从 0 开始到 i 结束，因为买入的天数一定小于卖出的天数。
+>
+>然后在这两者间的差价中找最大值。
+>
+
+```JavaScript
+let maxProfit = function (prices) {
+  let max = 0;
+  for (let i = 1; i < prices.length; i++) {
+    for (let j = 0; j < i; j++) {
+      let price = prices[j];
+      let sale = prices[i] - price;
+      max = Math.max(max, sale);
+    }
+  }
+  return max;
+};
+
+```
+
+>**动态规划版**
+>
+>状态转移方程: 当天的最大收益 = max(  当天卖出：当天的价格 - 过去几天最低的价格,  当天不卖：过去几天的最大收益 ) 
+
+```JavaScript
+/**
+ * DP版
+ */
+let maxProfit = function (prices) {
+  let n = prices.length;
+  if (!n || n === 1) return 0;
+
+  // 最大收益
+  let prevMax = 0;
+  // 最小价格
+  let prevMin = prices[0];
+
+  for (let i = 1; i < n; i++) { //循环迭代
+    let price = prices[i];
+
+    prevMax = Math.max(price - prevMin, prevMax);
+    prevMin = Math.min(price, prevMin);
+  }
+
+  return prevMax;
+};
+```
+
+#### 20  最长不含重复字符的子字符串 
+
+> 滑动窗口法
+>
+> 解题思路： 使用一个数组来维护滑动窗口
+>
+> 遍历字符串，判断字符是否在滑动窗口数组里
+>
+> - 不在则 push 进数组
+>
+> - 在则删除滑动窗口数组里相同字符及相同字符前的字符，然后将当前字符 push 进数组
+>
+> - 然后将 max 更新为当前最长子串的长度
+>
+>   遍历完，返回 max 即可
+
+```javascript
+var lengthOfLongestSubstring = function(s) {
+    let arr = [], max = 0
+    for(let i = 0; i < s.length; i++) {
+        let index = arr.indexOf(s[i])
+        if(index !== -1) {
+            arr.splice(0, index+1);
+        }
+        arr.push(s.charAt(i))
+        max = Math.max(arr.length, max) 
+    }
+    return max
+};
+
+```
+
+#### 21 判断是否回文字符串 
+
+ 给定一个非空字符串 `s`，**最多**删除一个字符。判断是否能成为回文字符串。 
+
+>### 解题思路一
+>
+>1. 回文字符串，字符串`正序反序都一样`。同样也是`对称`的。
+>2. 正反指针，一个从`头`，一个从`末尾`，对比。
+>3. 找到不同的位置，去掉该位置的值。（可能为`i`，也可能为`length-1-i`）
+>4. 若两种情况中`有一种`是回文。那就返回`true`。否则返回`false`
+>5. 找不到不同的值当然也返回`true`
+
+```javascript
+var validPalindrome = function(s) {
+    let sArr = s.split('');
+    for (let i = 0; i <= (sArr.length >> 1); i++) {
+        if (sArr[i] !== sArr[sArr.length - i - 1]) {
+            let f = [...sArr];
+            f.splice(i,1);
+            let f2 = [...sArr]; 
+            f2.splice(sArr.length - i - 1,1);
+            if ((f+'') == ([...f].reverse()+'') || (f2 + '') == ([...f2].reverse() + '')) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    return true
+};
 ```
 

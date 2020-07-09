@@ -841,3 +841,249 @@ var validPalindrome = function(s) {
 };
 ```
 
+#### 22 找出第K大元素
+
+```javascript
+/**
+ * n 为数组的长度
+数组中的第 1 大元素，即，从小到大排序后，下标为 n - 1 的元素
+数组中的第 K 大元素，即，从小到大排序后，下标为 n - k 的元素
+我们希望位置 n - k 的左边是比它小的，右边是比它大的，那么 nums[n - k] 就是第 k 大的元素
+我们把 n-k 看作 pivot ，用快速排序的手法去 partition “分区”
+ */
+
+const findKthLargest = (nums, k) => {
+    const n = nums.length;
+  
+    const quick = (l, r) => {
+      if (l > r) return;
+      let random = Math.floor(Math.random() * (r - l + 1)) + l; // 随机选取一个index
+      swap(nums, random, r); // 将它和位置r的元素交换，让 nums[r] 作为 pivot 元素
+      /**
+       * 我们选定一个 pivot 元素，根据它进行 partition
+       * partition 找出一个位置：它左边的元素都比pivot小，右边的元素都比pivot大
+       * 左边和右边的元素的是未排序的，但 pivotIndex 是确定下来的
+      */
+      let pivotIndex = partition(nums, l, r);
+      /**
+       * 我们希望这个 pivotIndex 正好是 n-k
+       * 如果 n - k 小于 pivotIndex，则在 pivotIndex 的左边继续找
+       * 如果 n - k 大于 pivotIndex，则在 pivotIndex 的右边继续找
+       */
+      if (n - k < pivotIndex) { 
+        quick(l, pivotIndex - 1);
+      } else {
+        quick(pivotIndex + 1, r);
+      }
+      /**
+       * n - k == pivotIndex ，此时 nums 数组被 n-k 分成两部分
+       * 左边元素比 nums[n-k] 小，右边比 nums[n-k] 大，因此 nums[n-k] 就是第K大的元素
+       */
+    };
+  
+    quick(0, n - 1); // 让n-k位置的左边都比 nums[n-k] 小，右边都比 nums[n-k] 大
+    return nums[n - k]; 
+  };
+  
+  function partition(nums, left, right) {
+    let pivot = nums[right];             // 最右边的元素作为 pivot 元素
+    let pivotIndex = left;               // pivotIndex 初始为 left
+    for (let i = left; i < right; i++) { // 逐个考察元素，和 pivot 比较
+      if (nums[i] < pivot) {             // 如果当前元素比 pivot 小
+        swap(nums, i, pivotIndex);       // 将它交换到 pivotIndex 的位置
+        pivotIndex++;                    
+      }
+    }                                    // 循环结束时，pivotIndex左边都是比pivot小的
+    swap(nums, right, pivotIndex);       // pivotIndex和right交换，更新pivot元素
+    return pivotIndex;                   // 返回 pivotIndex 下标
+  }
+  
+  function swap(nums, p, q) {
+    const temp = nums[p];
+    nums[p] = nums[q];
+    nums[q] = temp;
+  }
+```
+
+#### 23 promise
+
+```javascript
+//三种状态，两种结果
+
+class Promise{
+    //定义promise，传入一个方法进去，且理解执行
+    constructor(fun){
+        //初始值为pending
+        this.state = 'pending';
+        //成功的值
+        this.value = undefined;
+        //失败的值
+        this.reason = undefined;
+        //注册成功的回调，主要为了在未来（异步中）使用
+        this.resolveCallbacks = [];
+        //注册失败回调
+        this.rejectCallbacks = [];
+        //因为promise只能从一种状态改变成另一种状态，且结果不可逆
+        let resolve = (value) =>{
+            if(this.state === 'pending'){
+                this.state = 'success';
+                this.value = value;
+                //在未来调用resolve才将该回调取出一一执行
+                this.rejectCallbacks.forEach(fn => fn())
+            }
+        }
+        let reject = (reason) =>{
+            if(this.state === 'pending'){
+                this.state = 'reject';
+                this.reason = reason;
+                this.rejectCallbacks.forEach(fn => fn())
+            }
+        }
+        //传入两个方法，供回调
+        fun(resolve, reject)
+    }
+    //then方法，传入一个正常回调和异常回调
+    then(resolve, reject){
+        // const promise2 = new Promise((resolve, reject) => {
+        //     if(this.state === 'success'){
+        //         //进入下一个事件循环
+        //         setTimeout(() => {
+        //             const x = resolve(this.value)//返回值可能为promise|| 123 || '1233'
+        //             resolvePromise(promise2, x, resolve, reject)
+        //         })
+                
+        //     }
+        // })
+         if(this.state === 'reject'){
+            reject(this.reason)
+        }
+        //当状态还未改变时，记录回调，当触发执行时，可以执行记录下来的方法
+        if(this.state === 'pending'){
+            //当状态未改变时先记录成功时使用的回调，等到未来状态改变时直接使用（执行其中方法）
+            this.resolveCallbacks.push(() => {
+                resolve(this.value)
+            })
+            this.rejectCallbacks.push(() => {
+                reject(this.reason)
+            })
+        }
+    }
+}
+
+let p = new Promise((resolve, reject) => {
+    // resolve(100)
+    setTimeout(() => {
+        reject(10000)
+    },1000)
+     
+})
+p.then(res => console.log(res),reject => console.log(reject))
+
+
+```
+
+#### 24 深克隆
+
+```javascript
+const clone = parent => {
+  // 维护两个储存循环引用的数组
+  const parents = [];
+  const children = [];
+
+  const _clone = parent => {
+    if (parent === null) return null;
+    if (typeof parent !== 'object') return parent;
+
+    let child, proto;
+
+    if (isType(parent, 'Array')) {
+      // 对数组做特殊处理
+      child = [];
+    } else if (isType(parent, 'RegExp')) {
+      // 对正则对象做特殊处理
+      child = new RegExp(parent.source, getRegExp(parent));
+      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
+    } else if (isType(parent, 'Date')) {
+      // 对Date对象做特殊处理
+      child = new Date(parent.getTime());
+    } else {
+      // 处理对象原型
+      proto = Object.getPrototypeOf(parent);
+      // 利用Object.create切断原型链
+      child = Object.create(proto);
+    }
+
+    // 处理循环引用
+    const index = parents.indexOf(parent);
+
+    if (index != -1) {
+      // 如果父数组存在本对象,说明之前已经被引用过,直接返回此对象
+      return children[index];
+    }
+    parents.push(parent);
+    children.push(child);
+
+    for (let i in parent) {
+      // 递归
+      child[i] = _clone(parent[i]);
+    }
+
+    return child;
+  };
+  return _clone(parent);
+};
+
+/*****/
+function deepClone (obj) {
+        var newobj = Array.isArray(obj) ? [] : {};
+        if(obj && typeof obj !== 'object'){
+           for(let key in obj){
+               if(obj.hasOwnProperty(key)){
+                   newObj[key] = (obj && typeof obj[key] === 'object') ? deepClone(obj[key]) : obj[key];
+               }
+           }
+        }  
+        return newobj
+}
+```
+
+#### 25 防抖节流
+
+```javascript
+//当频繁触发一个事件时，一个频繁触发的事件，只在规定时间内，让最后一次生效，前面的不生效
+function debounce(fun,delay){
+    //记录上一次定时器
+    var timer = null; //第一次设置为空
+    //使用闭包防止每次调用时将timer初始化为null
+    return function(){
+        //清除上一次延时器
+        clearTimeout(timer);
+        //重新设置定时器
+        timer = setTimeout(function(){
+            fun.call(this,...arguments); //修正函数this指向
+        },delay);
+    }
+}
+
+/**
+ * 节流
+ * 当一个函数需要频繁被调用时，会消耗大量资源，使用节流的方式会减少资源的消耗
+ * 即在规定时间内只让函数触发的第一次生效
+ * @param {*} fn 
+ * @param {*} delay 
+ */
+function throttle(fn,delay){
+    //记录上一次触发时间
+    var lastTime = 0;
+    //使用闭包能防止lastTime的值每次调用时都初始化为0
+    return function(){
+        var nowTime = new Date().getTime();
+        if(nowTime - lastTime > delay){
+            fn.apply(this, arguments);
+            //同步时间
+            lastTime = nowTime;
+        }
+    }
+}
+```
+
